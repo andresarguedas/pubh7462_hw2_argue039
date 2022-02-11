@@ -1,0 +1,240 @@
+---
+title: "PubH7462 - Homework 2"
+author: "Andrés Arguedas"
+date: "10/2/2022"
+output: 
+  github_document:
+    toc: true
+---
+
+```{r setup, include = FALSE}
+# Load the required packages for this script
+library(tidyverse)
+library(gt)
+library(usdata)
+
+# Working directory for .RMD, figure output in Markdown, and messages/warnings
+# output
+knitr::opts_knit$set(
+  echo = TRUE,
+  root.dir = rprojroot::find_rstudio_root_file(),
+  fig.width = 6,
+  out.width = "70%",
+  fig.align = "center",
+  cache = FALSE,
+  warning = FALSE,
+  message = FALSE
+)
+
+# Set theme for ggplot2 to `theme_bw()`, as well as centering the title and
+# putting the legend at bottom by default
+theme_set(theme_bw())
+theme_update(
+  plot.title = element_text(hjust = 0.5),
+  legend.position = "bottom"
+)
+
+# Set the color palette of ggplot to a colorblind friendly one (Okabe-Ito)
+options(ggplot2.discrete.colour = c(
+  "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
+  "#000000"
+), ggplot2.discrete.fill = c(
+  "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",
+  "#000000"
+))
+
+# Set scientific notation output and decimal places for knitr
+options(scipen = 999)
+options(digits = 4)
+```
+
+## BRFSS SMART 2002-2010
+
+### Data Exploration & Cleaning
+
+First, we will start by loading the `brfss_smart_2010.csv` file into R as the object `brfss_smart_2010`. Since the data comes in a .csv file, then we can make use of the `read_csv()` function from the `readr` package to load it into R as a tibble, as follows:
+
+```{r load-data, message = F}
+# Load the BRFSS SMART data into R. Since the original data is in a .csv format,
+# then we can use the `read_csv()` function from the `readr` package to load it
+# as a tibble into R
+brfss_smart_2010 <- read_csv("./data/brfss_smart_2010.csv")
+```
+
+Having loaded the data, we can proceed to clean the variable names, select only the "Overall Health" question, obtain the county for which the data was obtained, and only select the variables of interest. We will call this object `brfss_smart_tidy`, which can be constructed with the following code:
+
+```{r clean-data}
+brfss_smart_tidy <- brfss_smart_2010 %>%
+  # Rename variables for ease of use when cleaning
+  rename(
+    LocationAbbr = Locationabbr,
+    LocationDesc = Locationdesc,
+    RespId = RESPID
+  ) %>%
+  # Clean variable names
+  janitor::clean_names() %>%
+  # Select only the "Overall Health" topic
+  filter(topic %in% "Overall Health") %>%
+  # Extract the county from the `location_desc` variable
+  mutate(county = str_extract(location_desc, "(?<=-).*")) %>%
+  # Leave only the `year`, `state`, `county`, `response`, `sample_size`, and
+  # `data_value` variables
+  dplyr::select(year, state = location_abbr, county, response, sample_size,
+    percentage = data_value
+  ) %>%
+  mutate(
+    # year = factor(year),
+    state = factor(state),
+    county = factor(county),
+    response = factor(response),
+    response = fct_relevel(
+      response, "Poor", "Fair", "Good", "Very good",
+      "Excellent"
+    )
+  )
+```
+
+Having loaded and cleaned the data of interest, we can proceed with the rest of the desired analyses.
+
+### Data Description
+
+The data set contains a total of `r nrow(brfss_smart_tidy)` observations and `r ncol(brfss_smart_tidy)` variables. In this case, every observation corresponds to information for a particular response from the survey to the "Overall Health" question, in a specific county, state, and year. Therefore, we have the following variables:
+
+| **Variable**  | **Description**                                                                                                            |
+|---------------|----------------------------------------------------------------------------------------------------------------------------|
+| `year`        | Year during which the data was collected. Takes values from 2002-2010                                                      |
+| `state`       | State where the data was collected                                                                                         |
+| `county`      | County where the data was collected                                                                                        |
+| `response`    | Response to the Overall Health question. Can takes values of **Poor**, **Fair**, **Good**, **Very Good**, or **Excellent** |
+| `sample_size` | Number of respondents from the county who answered with the specified level                                                |
+| `percentage`  | Percentage of the respondents from the county who answered with the specified level                                        |
+
+It's important to note that, although the number of counties for which there is information changes from year to year, and thus not all counties are included in this data set, and some, even when included, might not have information for all years in the study.
+
+### Do Data Science
+
+To start off, we will determine for which states there was infomation from 6 counties during 2004. The following table presents this information:
+
+```{r states-observed-6-locations-2004}
+brfss_smart_tidy %>%
+  filter(year == 2004) %>%
+  group_by(state) %>%
+  distinct(state, county) %>%
+  summarise(number_counties = n()) %>%
+  filter(number_counties >= 6) %>%
+  arrange(desc(number_counties)) %>%
+  mutate(state = abbr2state(state)) %>%
+  gt() %>%
+  tab_header(
+    title = "States for which there is information on more than 6 counties in
+    2004, by number of counties with information"
+  ) %>%
+  cols_label(
+    state = md("**State**"), number_counties = md("**Number of counties**")
+  ) %>%
+  cols_align(align = "left", columns = state) %>%
+  cols_align(align = "center", columns = number_counties)
+```
+
+As we can see, there's a total of 15 states with information on more than 6 counties, up to a total of 15 counties. Specifically, there are 8 states for which we have information on exactly 6 counties for 2004: `r brfss_smart_tidy %>% filter(year == 2004) %>% group_by(state) %>% distinct(state, county) %>% summarise(number_counties = n()) %>% filter(number_counties >= 6) %>% arrange(desc(number_counties)) %>% mutate(state = abbr2state(state)) %>% filter(number_counties == 6) %>% select(state) %>% pull()`. More generally, if we wanted to examine the number of counties for which there is information available, for every state and year, then we can make use of a "spaghetti plot", as presented below:
+
+```{r spaghetti-plot, message = FALSE}
+big.palette <- colorRampPalette(c(
+  "#E69F00", "#56B4E9", "#009E73", "#F0E442",
+  "#0072B2", "#D55E00", "#CC79A7", "#000000"
+))
+brfss_smart_tidy %>%
+  group_by(state, year) %>%
+  distinct(year, state, county) %>%
+  summarise(number_counties = n()) %>%
+  ungroup() %>%
+  mutate(state = fct_reorder(state, number_counties, mean, .desc = TRUE)) %>%
+  ggplot(aes(x = year, y = number_counties, group = state, col = state)) +
+  scale_colour_manual(values = big.palette(51)) +
+  geom_point() +
+  geom_line() +
+  scale_x_continuous(breaks = seq(2002, 2010, by = 1)) +
+  labs(
+    title = "Number of counties for which there is information, by state,
+    from 2002 to 2010, arranged according to the mean
+    number of counties with information during
+    the entire time period",
+    x = "Year",
+    y = "Number of counties with information",
+    col = "State"
+  ) +
+  theme(legend.position = "right")
+```
+
+From the above plot we can determine that the state with the highest number of counties for which information is available from 2002 to 2010 is `r brfss_smart_tidy %>% group_by(state, year) %>% distinct(year, state, county) %>% summarise(number_counties = n()) %>% ungroup(year) %>% summarise(mean = mean(number_counties)) %>% arrange(desc(mean)) %>% slice_head() %>% select(state) %>% pull() %>% abbr2state()` with `r brfss_smart_tidy %>% group_by(state, year) %>% distinct(year, state, county) %>% summarise(number_counties = n()) %>% ungroup(year) %>% summarise(mean = mean(number_counties)) %>% arrange(desc(mean)) %>% slice_head() %>% select(mean) %>% pull()` counties, on average, while `r brfss_smart_tidy %>% group_by(state, year) %>% distinct(year, state, county) %>% summarise(number_counties = n()) %>% ungroup(year) %>% summarise(mean = mean(number_counties)) %>% arrange(desc(mean)) %>% slice_min(mean) %>% select(state) %>% pull() %>% abbr2state()` have information on `r brfss_smart_tidy %>% group_by(state, year) %>% distinct(year, state, county) %>% summarise(number_counties = n()) %>% ungroup(year) %>% summarise(mean = mean(number_counties)) %>% arrange(desc(mean)) %>% slice_min(mean) %>% select(mean) %>% pull() %>% unique()` county, on average. Overall, from the figure, it seems like the number of counties with information is relatively stable, and mostly increasing, as the years go on, however this isn't always the case. For example, for New Jersey, the number of counties seems to be similar for all years, but in the case of Florida, the state with the second highest number of counties with information, we can see that there are two peaks in 2007 and 2010, which can inflate the mean.
+
+Moving on from the number of counties with information, we can also be interested in determining the number of people sampled, and the percentage to which they correspond, who responded for each category in Minnesota. Specifically, we will work with responses that were **Excellent**, **Good**, or **Poor**, and pool the results from all counties in the state to obtain a mean and a standard deviation, for the years 2002, 2006, and 2010. These results are presented in the following table:
+
+```{r mean-sd-table, message = FALSE}
+mean_table <- brfss_smart_tidy %>%
+  filter(
+    year %in% c(2002, 2006, 2010), state %in% "MN",
+    response %in% c("Excellent", "Good", "Poor")
+  ) %>%
+  group_by(year, response) %>%
+  summarise(across(
+    c(sample_size, percentage),
+    list(mean = mean, sd = sd)
+  ))
+
+mean_table %>%
+  gt() %>%
+  tab_header(title = "Mean and standard deviation of the number of respondents
+             in the sample who answered either Excellent, Good, or Poor, as well
+             as their corresponding percentage in the overall sample, in 
+             counties in the state of Minnesota, during the years 2002, 2006, 
+             and 2010") %>%
+  tab_spanner(
+    label = md("**Sample size**"),
+    columns = c(sample_size_mean, sample_size_sd)
+  ) %>%
+  tab_spanner(
+    label = md("**Percentage**"),
+    columns = c(percentage_mean, percentage_sd)
+  ) %>%
+  cols_label(
+    sample_size_mean = md("**Mean**"),
+    sample_size_sd = md("**Std. Deviation**"),
+    percentage_mean = md("**Mean**"),
+    percentage_sd = md("**Std. Deviation**"),
+    response = md("**Response**")
+  ) %>%
+  tab_stubhead(label = md("**Year**")) %>%
+  cols_align(align = "center", columns = contains(c("mean", "sd"))) %>%
+  # Need the development version of package `gt` to use this option!!! Run:
+  # `devtools::install_github("rstudio/gt")`
+  tab_options(row_group.as_column = TRUE)
+```
+
+From the above table we can notice that, independent of the year, there is a much smaller number of people who thought the overall health of the state was poor, compared to those who thought it was good or excellent, and furthermore the number of people who thought it was good or excellent was also very similar. Moving now to the relative scale, we can see that this trend also holds for the percentages of the sample corresponding to said responses, with the Good and Excellent responses having a much higher percentage than Poor, however this is relatively stable across the years, unlike the absolute number. In terms of the standard deviation, it increases greatly for all responses, and for both variables, during 2010, which means that there is a much greater variability in the responses for said year in the different counties with information. We can further visually explore the trends for both variables across time with the following plot:
+
+```{r mean-sd-plot}
+mean_table %>%
+  pivot_longer(contains(c("mean", "sd")),
+    names_pattern = c("(sample_size|percentage)_(.*)"),
+    names_to = c("variable", ".value")
+  ) %>%
+  mutate(variable = variable %>%
+    str_replace("_", " ") %>%
+    str_to_sentence()) %>%
+  ggplot(aes(x = year, y = mean, col = response, group = response)) +
+  facet_wrap(~variable, scales = "free_y") +
+  geom_point() +
+  geom_line() +
+  labs(
+    title = "Mean number of respondents in the sample, and their corresponding 
+    percentage, who answered either Excellent, Good, or Poor, 
+    according to their response, in counties in the state of 
+    Minnesota, during the years 2002, 2006, and 2010",
+    x = "Year",
+    y = "Mean",
+    col = "Response"
+  )
+```
+
+As we can see, overall Good and Excellent responses have a higher mean compared to the Poor responses, and the mean is also similar between the Good and Excellent responses. However, although these trends are relatively stable across the years for the percentage, there is an increases in 2010 for the absolute number of respondents for all responses, which could in turn indicate an overall larger sample during the last years of the study for which there is information.
