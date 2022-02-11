@@ -9,9 +9,9 @@ output:
 
 ```{r setup, include = FALSE}
 # Load the required packages for this script
-library(tidyverse)
-library(gt)
-library(usdata)
+library(tidyverse) # for data carpentry and plotting
+library(gt) # for creating tables
+library(usdata) # for transforming state abbreviations into full names
 
 # Working directory for .RMD, figure output in Markdown, and messages/warnings
 # output
@@ -64,6 +64,7 @@ brfss_smart_2010 <- read_csv("./data/brfss_smart_2010.csv")
 Having loaded the data, we can proceed to clean the variable names, select only the "Overall Health" question, obtain the county for which the data was obtained, and only select the variables of interest. We will call this object `brfss_smart_tidy`, which can be constructed with the following code:
 
 ```{r clean-data}
+# Create the `brfss_smart_tidy` object with the tidy data set
 brfss_smart_tidy <- brfss_smart_2010 %>%
   # Rename variables for ease of use when cleaning
   rename(
@@ -82,8 +83,9 @@ brfss_smart_tidy <- brfss_smart_2010 %>%
   dplyr::select(year, state = location_abbr, county, response, sample_size,
     percentage = data_value
   ) %>%
+  # Transform the character variables into factors, and reorder the `response`
+  # variable so that the levels are ordered from worst to best
   mutate(
-    # year = factor(year),
     state = factor(state),
     county = factor(county),
     response = factor(response),
@@ -113,25 +115,38 @@ It's important to note that, although the number of counties for which there is 
 
 ### Do Data Science
 
-To start off, we will determine for which states there was infomation from 6 counties during 2004. The following table presents this information:
+To start off, we will determine for which states there was information from 6 counties during 2004. The following table presents this information:
 
 ```{r states-observed-6-locations-2004}
+# Create a table containing states with 6 or more counties with information
+# during 2004
 brfss_smart_tidy %>%
+  # Choose only observations in 2004
   filter(year == 2004) %>%
+  # Group the data set by state
   group_by(state) %>%
+  # Pick only distinct combinations of state and counties
   distinct(state, county) %>%
+  # Obtain the number of counties for each state
   summarise(number_counties = n()) %>%
+  # Choose only states for which there is information on 6 or more counties
   filter(number_counties >= 6) %>%
+  # Order the data in a descending order according to the number of counties
   arrange(desc(number_counties)) %>%
+  # Change the abbreviated state name to the full state name
   mutate(state = abbr2state(state)) %>%
+  # Create a table for displaying in the document
   gt() %>%
+  # Add a header to the table
   tab_header(
     title = "States for which there is information on more than 6 counties in
     2004, by number of counties with information"
   ) %>%
+  # Change the name of the columns
   cols_label(
     state = md("**State**"), number_counties = md("**Number of counties**")
   ) %>%
+  # Modify text alignment of columns
   cols_align(align = "left", columns = state) %>%
   cols_align(align = "center", columns = number_counties)
 ```
@@ -139,21 +154,42 @@ brfss_smart_tidy %>%
 As we can see, there's a total of 15 states with information on more than 6 counties, up to a total of 15 counties. Specifically, there are 8 states for which we have information on exactly 6 counties for 2004: `r brfss_smart_tidy %>% filter(year == 2004) %>% group_by(state) %>% distinct(state, county) %>% summarise(number_counties = n()) %>% filter(number_counties >= 6) %>% arrange(desc(number_counties)) %>% mutate(state = abbr2state(state)) %>% filter(number_counties == 6) %>% select(state) %>% pull()`. More generally, if we wanted to examine the number of counties for which there is information available, for every state and year, then we can make use of a "spaghetti plot", as presented below:
 
 ```{r spaghetti-plot, message = FALSE}
-big.palette <- colorRampPalette(c(
+# First, we need to create a function that allows us to extend the Okabe-Ito
+# color palette for the 51 colors needed for all of the states (and the District
+# of Columbia). This can be done using the `colorRampPalette()` palette, which
+# will create a new function, called `bigPalette()`, which takes as an argument
+# the number of colors desired, and returns a corresponding set of hex codes for
+# said colors
+bigPalette <- colorRampPalette(c(
   "#E69F00", "#56B4E9", "#009E73", "#F0E442",
   "#0072B2", "#D55E00", "#CC79A7", "#000000"
 ))
+
+# Now, we can proceed to create the spaghetti plot for the number of counties
+# with information, by state, from 2002 to 2010
 brfss_smart_tidy %>%
+  # Group the data by state and year
   group_by(state, year) %>%
+  # Take only unique combinations of state, counties, and year
   distinct(year, state, county) %>%
+  # Compute the number of counties with information, for each state, in every
+  # year
   summarise(number_counties = n()) %>%
+  # Drop the groups for ease of use later
   ungroup() %>%
+  # Reorder the labels of the state, according to the mean number of counties
+  # with information, from largest to smallest
   mutate(state = fct_reorder(state, number_counties, mean, .desc = TRUE)) %>%
+  # Create the plot
   ggplot(aes(x = year, y = number_counties, group = state, col = state)) +
-  scale_colour_manual(values = big.palette(51)) +
+  # Specify the desired color palette
+  scale_colour_manual(values = bigPalette(51)) +
+  # Add points and lines to the plot
   geom_point() +
   geom_line() +
+  # Specify tick marks in the x-axis
   scale_x_continuous(breaks = seq(2002, 2010, by = 1)) +
+  # Add titles to the plot, labels, and legend
   labs(
     title = "Number of counties for which there is information, by state,
     from 2002 to 2010, arranged according to the mean
@@ -163,6 +199,7 @@ brfss_smart_tidy %>%
     y = "Number of counties with information",
     col = "State"
   ) +
+  # Position the legend to the right of the plot, for better visualization
   theme(legend.position = "right")
 ```
 
@@ -171,24 +208,37 @@ From the above plot we can determine that the state with the highest number of c
 Moving on from the number of counties with information, we can also be interested in determining the number of people sampled, and the percentage to which they correspond, who responded for each category in Minnesota. Specifically, we will work with responses that were **Excellent**, **Good**, or **Poor**, and pool the results from all counties in the state to obtain a mean and a standard deviation, for the years 2002, 2006, and 2010. These results are presented in the following table:
 
 ```{r mean-sd-table, message = FALSE}
+# Create an object, called `mean_table`, which contains, for each of the years
+# 2002, 2006, and 2010, the mean and standard deviation of the number and
+# percentage of people sampled, from the counties in the state of Minnesota,
+# which responded with Poor, Good, or Excellent
 mean_table <- brfss_smart_tidy %>%
+  # Pick only records for the desired years, in Minnesota, and that responded
+  # Excellent, Good, or Poor
   filter(
     year %in% c(2002, 2006, 2010), state %in% "MN",
     response %in% c("Excellent", "Good", "Poor")
   ) %>%
+  # Group the observations by the year and response type
   group_by(year, response) %>%
+  # Summarize using the mean and standard deviation of the sample size and
+  # percentage, for every year and response
   summarise(across(
     c(sample_size, percentage),
     list(mean = mean, sd = sd)
   ))
 
+# Now, we will transform the data obtained above into a table to be displayed
 mean_table %>%
+  # Create the table
   gt() %>%
+  # Add a title to the table
   tab_header(title = "Mean and standard deviation of the number of respondents
              in the sample who answered either Excellent, Good, or Poor, as well
-             as their corresponding percentage in the overall sample, in 
-             counties in the state of Minnesota, during the years 2002, 2006, 
+             as their corresponding percentage in the overall sample, in
+             counties in the state of Minnesota, during the years 2002, 2006,
              and 2010") %>%
+  # Add groupings of variables in the table
   tab_spanner(
     label = md("**Sample size**"),
     columns = c(sample_size_mean, sample_size_sd)
@@ -197,6 +247,7 @@ mean_table %>%
     label = md("**Percentage**"),
     columns = c(percentage_mean, percentage_sd)
   ) %>%
+  # Change names of variables in columns
   cols_label(
     sample_size_mean = md("**Mean**"),
     sample_size_sd = md("**Std. Deviation**"),
@@ -204,9 +255,12 @@ mean_table %>%
     percentage_sd = md("**Std. Deviation**"),
     response = md("**Response**")
   ) %>%
+  # Change name of the grouping variable at the left of the table
   tab_stubhead(label = md("**Year**")) %>%
+  # Specify the alignment of the columns in the table
   cols_align(align = "center", columns = contains(c("mean", "sd"))) %>%
-  # Need the development version of package `gt` to use this option!!! Run:
+  # Add the grouping variable to the left of the table. NOTE: Need the
+  # development version of package `gt` to use this option!!! Run:
   # `devtools::install_github("rstudio/gt")`
   tab_options(row_group.as_column = TRUE)
 ```
@@ -214,22 +268,31 @@ mean_table %>%
 From the above table we can notice that, independent of the year, there is a much smaller number of people who thought the overall health of the state was poor, compared to those who thought it was good or excellent, and furthermore the number of people who thought it was good or excellent was also very similar. Moving now to the relative scale, we can see that this trend also holds for the percentages of the sample corresponding to said responses, with the Good and Excellent responses having a much higher percentage than Poor, however this is relatively stable across the years, unlike the absolute number. In terms of the standard deviation, it increases greatly for all responses, and for both variables, during 2010, which means that there is a much greater variability in the responses for said year in the different counties with information. We can further visually explore the trends for both variables across time with the following plot:
 
 ```{r mean-sd-plot}
+# Create a plot of the mean absolute and relative number of responses to each
+# category
 mean_table %>%
+  # Transform the data so that each row corresponds to a particular year,
+  # response, and either the absolute or relative number
   pivot_longer(contains(c("mean", "sd")),
     names_pattern = c("(sample_size|percentage)_(.*)"),
     names_to = c("variable", ".value")
   ) %>%
+  # Change names of variables to make it easier to plot
   mutate(variable = variable %>%
     str_replace("_", " ") %>%
     str_to_sentence()) %>%
+  # Create the plot
   ggplot(aes(x = year, y = mean, col = response, group = response)) +
+  # Facet according to the variable of interest
   facet_wrap(~variable, scales = "free_y") +
+  # Add points and lines to the plot
   geom_point() +
   geom_line() +
+  # Add titles to the plot, labels, and legend
   labs(
-    title = "Mean number of respondents in the sample, and their corresponding 
-    percentage, who answered either Excellent, Good, or Poor, 
-    according to their response, in counties in the state of 
+    title = "Mean number of respondents in the sample, and their corresponding
+    percentage, who answered either Excellent, Good, or Poor,
+    according to their response, in counties in the state of
     Minnesota, during the years 2002, 2006, and 2010",
     x = "Year",
     y = "Mean",

@@ -31,6 +31,7 @@ will call this object `brfss_smart_tidy`, which can be constructed with
 the following code:
 
 ``` r
+# Create the `brfss_smart_tidy` object with the tidy data set
 brfss_smart_tidy <- brfss_smart_2010 %>%
   # Rename variables for ease of use when cleaning
   rename(
@@ -49,8 +50,9 @@ brfss_smart_tidy <- brfss_smart_2010 %>%
   dplyr::select(year, state = location_abbr, county, response, sample_size,
     percentage = data_value
   ) %>%
+  # Transform the character variables into factors, and reorder the `response`
+  # variable so that the levels are ordered from worst to best
   mutate(
-    # year = factor(year),
     state = factor(state),
     county = factor(county),
     response = factor(response),
@@ -87,37 +89,50 @@ might not have information for all years in the study.
 
 ### Do Data Science
 
-To start off, we will determine for which states there was infomation
+To start off, we will determine for which states there was information
 from 6 counties during 2004. The following table presents this
 information:
 
 ``` r
+# Create a table containing states with 6 or more counties with information
+# during 2004
 brfss_smart_tidy %>%
+  # Choose only observations in 2004
   filter(year == 2004) %>%
+  # Group the data set by state
   group_by(state) %>%
+  # Pick only distinct combinations of state and counties
   distinct(state, county) %>%
+  # Obtain the number of counties for each state
   summarise(number_counties = n()) %>%
+  # Choose only states for which there is information on 6 or more counties
   filter(number_counties >= 6) %>%
+  # Order the data in a descending order according to the number of counties
   arrange(desc(number_counties)) %>%
+  # Change the abbreviated state name to the full state name
   mutate(state = abbr2state(state)) %>%
+  # Create a table for displaying in the document
   gt() %>%
+  # Add a header to the table
   tab_header(
     title = "States for which there is information on more than 6 counties in
     2004, by number of counties with information"
   ) %>%
+  # Change the name of the columns
   cols_label(
     state = md("**State**"), number_counties = md("**Number of counties**")
   ) %>%
+  # Modify text alignment of columns
   cols_align(align = "left", columns = state) %>%
   cols_align(align = "center", columns = number_counties)
 ```
 
-<div id="hleniocpsv" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="cnzzirtxfq" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#hleniocpsv .gt_table {
+#cnzzirtxfq .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -142,7 +157,7 @@ brfss_smart_tidy %>%
   border-left-color: #D3D3D3;
 }
 
-#hleniocpsv .gt_heading {
+#cnzzirtxfq .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -154,7 +169,7 @@ brfss_smart_tidy %>%
   border-right-color: #D3D3D3;
 }
 
-#hleniocpsv .gt_title {
+#cnzzirtxfq .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -164,7 +179,7 @@ brfss_smart_tidy %>%
   border-bottom-width: 0;
 }
 
-#hleniocpsv .gt_subtitle {
+#cnzzirtxfq .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -174,13 +189,13 @@ brfss_smart_tidy %>%
   border-top-width: 0;
 }
 
-#hleniocpsv .gt_bottom_border {
+#cnzzirtxfq .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#hleniocpsv .gt_col_headings {
+#cnzzirtxfq .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -195,7 +210,7 @@ brfss_smart_tidy %>%
   border-right-color: #D3D3D3;
 }
 
-#hleniocpsv .gt_col_heading {
+#cnzzirtxfq .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -215,7 +230,7 @@ brfss_smart_tidy %>%
   overflow-x: hidden;
 }
 
-#hleniocpsv .gt_column_spanner_outer {
+#cnzzirtxfq .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -227,15 +242,15 @@ brfss_smart_tidy %>%
   padding-right: 4px;
 }
 
-#hleniocpsv .gt_column_spanner_outer:first-child {
+#cnzzirtxfq .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#hleniocpsv .gt_column_spanner_outer:last-child {
+#cnzzirtxfq .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#hleniocpsv .gt_column_spanner {
+#cnzzirtxfq .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -247,7 +262,7 @@ brfss_smart_tidy %>%
   width: 100%;
 }
 
-#hleniocpsv .gt_group_heading {
+#cnzzirtxfq .gt_group_heading {
   padding: 8px;
   color: #333333;
   background-color: #FFFFFF;
@@ -269,7 +284,7 @@ brfss_smart_tidy %>%
   vertical-align: middle;
 }
 
-#hleniocpsv .gt_empty_group_heading {
+#cnzzirtxfq .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -284,15 +299,15 @@ brfss_smart_tidy %>%
   vertical-align: middle;
 }
 
-#hleniocpsv .gt_from_md > :first-child {
+#cnzzirtxfq .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#hleniocpsv .gt_from_md > :last-child {
+#cnzzirtxfq .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#hleniocpsv .gt_row {
+#cnzzirtxfq .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -311,7 +326,7 @@ brfss_smart_tidy %>%
   overflow-x: hidden;
 }
 
-#hleniocpsv .gt_stub {
+#cnzzirtxfq .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -323,7 +338,7 @@ brfss_smart_tidy %>%
   padding-left: 12px;
 }
 
-#hleniocpsv .gt_stub_row_group {
+#cnzzirtxfq .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -336,11 +351,11 @@ brfss_smart_tidy %>%
   vertical-align: top;
 }
 
-#hleniocpsv .gt_row_group_first td {
+#cnzzirtxfq .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#hleniocpsv .gt_summary_row {
+#cnzzirtxfq .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -350,16 +365,16 @@ brfss_smart_tidy %>%
   padding-right: 5px;
 }
 
-#hleniocpsv .gt_first_summary_row {
+#cnzzirtxfq .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#hleniocpsv .gt_first_summary_row.thick {
+#cnzzirtxfq .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#hleniocpsv .gt_last_summary_row {
+#cnzzirtxfq .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -369,7 +384,7 @@ brfss_smart_tidy %>%
   border-bottom-color: #D3D3D3;
 }
 
-#hleniocpsv .gt_grand_summary_row {
+#cnzzirtxfq .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -379,7 +394,7 @@ brfss_smart_tidy %>%
   padding-right: 5px;
 }
 
-#hleniocpsv .gt_first_grand_summary_row {
+#cnzzirtxfq .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -389,11 +404,11 @@ brfss_smart_tidy %>%
   border-top-color: #D3D3D3;
 }
 
-#hleniocpsv .gt_striped {
+#cnzzirtxfq .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#hleniocpsv .gt_table_body {
+#cnzzirtxfq .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -402,7 +417,7 @@ brfss_smart_tidy %>%
   border-bottom-color: #D3D3D3;
 }
 
-#hleniocpsv .gt_footnotes {
+#cnzzirtxfq .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -416,13 +431,13 @@ brfss_smart_tidy %>%
   border-right-color: #D3D3D3;
 }
 
-#hleniocpsv .gt_footnote {
+#cnzzirtxfq .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding: 4px;
 }
 
-#hleniocpsv .gt_sourcenotes {
+#cnzzirtxfq .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -436,65 +451,65 @@ brfss_smart_tidy %>%
   border-right-color: #D3D3D3;
 }
 
-#hleniocpsv .gt_sourcenote {
+#cnzzirtxfq .gt_sourcenote {
   font-size: 90%;
   padding: 4px;
 }
 
-#hleniocpsv .gt_left {
+#cnzzirtxfq .gt_left {
   text-align: left;
 }
 
-#hleniocpsv .gt_center {
+#cnzzirtxfq .gt_center {
   text-align: center;
 }
 
-#hleniocpsv .gt_right {
+#cnzzirtxfq .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#hleniocpsv .gt_font_normal {
+#cnzzirtxfq .gt_font_normal {
   font-weight: normal;
 }
 
-#hleniocpsv .gt_font_bold {
+#cnzzirtxfq .gt_font_bold {
   font-weight: bold;
 }
 
-#hleniocpsv .gt_font_italic {
+#cnzzirtxfq .gt_font_italic {
   font-style: italic;
 }
 
-#hleniocpsv .gt_super {
+#cnzzirtxfq .gt_super {
   font-size: 65%;
 }
 
-#hleniocpsv .gt_footnote_marks {
+#cnzzirtxfq .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 75%;
   vertical-align: 0.4em;
 }
 
-#hleniocpsv .gt_asterisk {
+#cnzzirtxfq .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#hleniocpsv .gt_slash_mark {
+#cnzzirtxfq .gt_slash_mark {
   font-size: 0.7em;
   line-height: 0.7em;
   vertical-align: 0.15em;
 }
 
-#hleniocpsv .gt_fraction_numerator {
+#cnzzirtxfq .gt_fraction_numerator {
   font-size: 0.6em;
   line-height: 0.6em;
   vertical-align: 0.45em;
 }
 
-#hleniocpsv .gt_fraction_denominator {
+#cnzzirtxfq .gt_fraction_denominator {
   font-size: 0.6em;
   line-height: 0.6em;
   vertical-align: -0.05em;
@@ -560,21 +575,42 @@ counties for which there is information available, for every state and
 year, then we can make use of a “spaghetti plot”, as presented below:
 
 ``` r
-big.palette <- colorRampPalette(c(
+# First, we need to create a function that allows us to extend the Okabe-Ito
+# color palette for the 51 colors needed for all of the states (and the District
+# of Columbia). This can be done using the `colorRampPalette()` palette, which
+# will create a new function, called `bigPalette()`, which takes as an argument
+# the number of colors desired, and returns a corresponding set of hex codes for
+# said colors
+bigPalette <- colorRampPalette(c(
   "#E69F00", "#56B4E9", "#009E73", "#F0E442",
   "#0072B2", "#D55E00", "#CC79A7", "#000000"
 ))
+
+# Now, we can proceed to create the spaghetti plot for the number of counties
+# with information, by state, from 2002 to 2010
 brfss_smart_tidy %>%
+  # Group the data by state and year
   group_by(state, year) %>%
+  # Take only unique combinations of state, counties, and year
   distinct(year, state, county) %>%
+  # Compute the number of counties with information, for each state, in every
+  # year
   summarise(number_counties = n()) %>%
+  # Drop the groups for ease of use later
   ungroup() %>%
+  # Reorder the labels of the state, according to the mean number of counties
+  # with information, from largest to smallest
   mutate(state = fct_reorder(state, number_counties, mean, .desc = TRUE)) %>%
+  # Create the plot
   ggplot(aes(x = year, y = number_counties, group = state, col = state)) +
-  scale_colour_manual(values = big.palette(51)) +
+  # Specify the desired color palette
+  scale_colour_manual(values = bigPalette(51)) +
+  # Add points and lines to the plot
   geom_point() +
   geom_line() +
+  # Specify tick marks in the x-axis
   scale_x_continuous(breaks = seq(2002, 2010, by = 1)) +
+  # Add titles to the plot, labels, and legend
   labs(
     title = "Number of counties for which there is information, by state,
     from 2002 to 2010, arranged according to the mean
@@ -584,6 +620,7 @@ brfss_smart_tidy %>%
     y = "Number of counties with information",
     col = "State"
   ) +
+  # Position the legend to the right of the plot, for better visualization
   theme(legend.position = "right")
 ```
 
@@ -611,24 +648,37 @@ years 2002, 2006, and 2010. These results are presented in the following
 table:
 
 ``` r
+# Create an object, called `mean_table`, which contains, for each of the years
+# 2002, 2006, and 2010, the mean and standard deviation of the number and
+# percentage of people sampled, from the counties in the state of Minnesota,
+# which responded with Poor, Good, or Excellent
 mean_table <- brfss_smart_tidy %>%
+  # Pick only records for the desired years, in Minnesota, and that responded
+  # Excellent, Good, or Poor
   filter(
     year %in% c(2002, 2006, 2010), state %in% "MN",
     response %in% c("Excellent", "Good", "Poor")
   ) %>%
+  # Group the observations by the year and response type
   group_by(year, response) %>%
+  # Summarize using the mean and standard deviation of the sample size and
+  # percentage, for every year and response
   summarise(across(
     c(sample_size, percentage),
     list(mean = mean, sd = sd)
   ))
 
+# Now, we will transform the data obtained above into a table to be displayed
 mean_table %>%
+  # Create the table
   gt() %>%
+  # Add a title to the table
   tab_header(title = "Mean and standard deviation of the number of respondents
              in the sample who answered either Excellent, Good, or Poor, as well
-             as their corresponding percentage in the overall sample, in 
-             counties in the state of Minnesota, during the years 2002, 2006, 
+             as their corresponding percentage in the overall sample, in
+             counties in the state of Minnesota, during the years 2002, 2006,
              and 2010") %>%
+  # Add groupings of variables in the table
   tab_spanner(
     label = md("**Sample size**"),
     columns = c(sample_size_mean, sample_size_sd)
@@ -637,6 +687,7 @@ mean_table %>%
     label = md("**Percentage**"),
     columns = c(percentage_mean, percentage_sd)
   ) %>%
+  # Change names of variables in columns
   cols_label(
     sample_size_mean = md("**Mean**"),
     sample_size_sd = md("**Std. Deviation**"),
@@ -644,19 +695,22 @@ mean_table %>%
     percentage_sd = md("**Std. Deviation**"),
     response = md("**Response**")
   ) %>%
+  # Change name of the grouping variable at the left of the table
   tab_stubhead(label = md("**Year**")) %>%
+  # Specify the alignment of the columns in the table
   cols_align(align = "center", columns = contains(c("mean", "sd"))) %>%
-  # Need the development version of package `gt` to use this option!!! Run:
+  # Add the grouping variable to the left of the table. NOTE: Need the
+  # development version of package `gt` to use this option!!! Run:
   # `devtools::install_github("rstudio/gt")`
   tab_options(row_group.as_column = TRUE)
 ```
 
-<div id="yepxfjcfrt" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="oawzyqawea" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#yepxfjcfrt .gt_table {
+#oawzyqawea .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -681,7 +735,7 @@ mean_table %>%
   border-left-color: #D3D3D3;
 }
 
-#yepxfjcfrt .gt_heading {
+#oawzyqawea .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -693,7 +747,7 @@ mean_table %>%
   border-right-color: #D3D3D3;
 }
 
-#yepxfjcfrt .gt_title {
+#oawzyqawea .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -703,7 +757,7 @@ mean_table %>%
   border-bottom-width: 0;
 }
 
-#yepxfjcfrt .gt_subtitle {
+#oawzyqawea .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -713,13 +767,13 @@ mean_table %>%
   border-top-width: 0;
 }
 
-#yepxfjcfrt .gt_bottom_border {
+#oawzyqawea .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#yepxfjcfrt .gt_col_headings {
+#oawzyqawea .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -734,7 +788,7 @@ mean_table %>%
   border-right-color: #D3D3D3;
 }
 
-#yepxfjcfrt .gt_col_heading {
+#oawzyqawea .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -754,7 +808,7 @@ mean_table %>%
   overflow-x: hidden;
 }
 
-#yepxfjcfrt .gt_column_spanner_outer {
+#oawzyqawea .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -766,15 +820,15 @@ mean_table %>%
   padding-right: 4px;
 }
 
-#yepxfjcfrt .gt_column_spanner_outer:first-child {
+#oawzyqawea .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#yepxfjcfrt .gt_column_spanner_outer:last-child {
+#oawzyqawea .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#yepxfjcfrt .gt_column_spanner {
+#oawzyqawea .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -786,7 +840,7 @@ mean_table %>%
   width: 100%;
 }
 
-#yepxfjcfrt .gt_group_heading {
+#oawzyqawea .gt_group_heading {
   padding: 8px;
   color: #333333;
   background-color: #FFFFFF;
@@ -808,7 +862,7 @@ mean_table %>%
   vertical-align: middle;
 }
 
-#yepxfjcfrt .gt_empty_group_heading {
+#oawzyqawea .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -823,15 +877,15 @@ mean_table %>%
   vertical-align: middle;
 }
 
-#yepxfjcfrt .gt_from_md > :first-child {
+#oawzyqawea .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#yepxfjcfrt .gt_from_md > :last-child {
+#oawzyqawea .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#yepxfjcfrt .gt_row {
+#oawzyqawea .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -850,7 +904,7 @@ mean_table %>%
   overflow-x: hidden;
 }
 
-#yepxfjcfrt .gt_stub {
+#oawzyqawea .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -862,7 +916,7 @@ mean_table %>%
   padding-left: 12px;
 }
 
-#yepxfjcfrt .gt_stub_row_group {
+#oawzyqawea .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -875,11 +929,11 @@ mean_table %>%
   vertical-align: top;
 }
 
-#yepxfjcfrt .gt_row_group_first td {
+#oawzyqawea .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#yepxfjcfrt .gt_summary_row {
+#oawzyqawea .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -889,16 +943,16 @@ mean_table %>%
   padding-right: 5px;
 }
 
-#yepxfjcfrt .gt_first_summary_row {
+#oawzyqawea .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#yepxfjcfrt .gt_first_summary_row.thick {
+#oawzyqawea .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#yepxfjcfrt .gt_last_summary_row {
+#oawzyqawea .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -908,7 +962,7 @@ mean_table %>%
   border-bottom-color: #D3D3D3;
 }
 
-#yepxfjcfrt .gt_grand_summary_row {
+#oawzyqawea .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -918,7 +972,7 @@ mean_table %>%
   padding-right: 5px;
 }
 
-#yepxfjcfrt .gt_first_grand_summary_row {
+#oawzyqawea .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -928,11 +982,11 @@ mean_table %>%
   border-top-color: #D3D3D3;
 }
 
-#yepxfjcfrt .gt_striped {
+#oawzyqawea .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#yepxfjcfrt .gt_table_body {
+#oawzyqawea .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -941,7 +995,7 @@ mean_table %>%
   border-bottom-color: #D3D3D3;
 }
 
-#yepxfjcfrt .gt_footnotes {
+#oawzyqawea .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -955,13 +1009,13 @@ mean_table %>%
   border-right-color: #D3D3D3;
 }
 
-#yepxfjcfrt .gt_footnote {
+#oawzyqawea .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding: 4px;
 }
 
-#yepxfjcfrt .gt_sourcenotes {
+#oawzyqawea .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -975,65 +1029,65 @@ mean_table %>%
   border-right-color: #D3D3D3;
 }
 
-#yepxfjcfrt .gt_sourcenote {
+#oawzyqawea .gt_sourcenote {
   font-size: 90%;
   padding: 4px;
 }
 
-#yepxfjcfrt .gt_left {
+#oawzyqawea .gt_left {
   text-align: left;
 }
 
-#yepxfjcfrt .gt_center {
+#oawzyqawea .gt_center {
   text-align: center;
 }
 
-#yepxfjcfrt .gt_right {
+#oawzyqawea .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#yepxfjcfrt .gt_font_normal {
+#oawzyqawea .gt_font_normal {
   font-weight: normal;
 }
 
-#yepxfjcfrt .gt_font_bold {
+#oawzyqawea .gt_font_bold {
   font-weight: bold;
 }
 
-#yepxfjcfrt .gt_font_italic {
+#oawzyqawea .gt_font_italic {
   font-style: italic;
 }
 
-#yepxfjcfrt .gt_super {
+#oawzyqawea .gt_super {
   font-size: 65%;
 }
 
-#yepxfjcfrt .gt_footnote_marks {
+#oawzyqawea .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 75%;
   vertical-align: 0.4em;
 }
 
-#yepxfjcfrt .gt_asterisk {
+#oawzyqawea .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#yepxfjcfrt .gt_slash_mark {
+#oawzyqawea .gt_slash_mark {
   font-size: 0.7em;
   line-height: 0.7em;
   vertical-align: 0.15em;
 }
 
-#yepxfjcfrt .gt_fraction_numerator {
+#oawzyqawea .gt_fraction_numerator {
   font-size: 0.6em;
   line-height: 0.6em;
   vertical-align: 0.45em;
 }
 
-#yepxfjcfrt .gt_fraction_denominator {
+#oawzyqawea .gt_fraction_denominator {
   font-size: 0.6em;
   line-height: 0.6em;
   vertical-align: -0.05em;
@@ -1044,8 +1098,8 @@ mean_table %>%
     <tr>
       <th colspan="6" class="gt_heading gt_title gt_font_normal gt_bottom_border" style>Mean and standard deviation of the number of respondents
              in the sample who answered either Excellent, Good, or Poor, as well
-             as their corresponding percentage in the overall sample, in 
-             counties in the state of Minnesota, during the years 2002, 2006, 
+             as their corresponding percentage in the overall sample, in
+             counties in the state of Minnesota, during the years 2002, 2006,
              and 2010</th>
     </tr>
     
@@ -1139,22 +1193,31 @@ with information. We can further visually explore the trends for both
 variables across time with the following plot:
 
 ``` r
+# Create a plot of the mean absolute and relative number of responses to each
+# category
 mean_table %>%
+  # Transform the data so that each row corresponds to a particular year,
+  # response, and either the absolute or relative number
   pivot_longer(contains(c("mean", "sd")),
     names_pattern = c("(sample_size|percentage)_(.*)"),
     names_to = c("variable", ".value")
   ) %>%
+  # Change names of variables to make it easier to plot
   mutate(variable = variable %>%
     str_replace("_", " ") %>%
     str_to_sentence()) %>%
+  # Create the plot
   ggplot(aes(x = year, y = mean, col = response, group = response)) +
+  # Facet according to the variable of interest
   facet_wrap(~variable, scales = "free_y") +
+  # Add points and lines to the plot
   geom_point() +
   geom_line() +
+  # Add titles to the plot, labels, and legend
   labs(
-    title = "Mean number of respondents in the sample, and their corresponding 
-    percentage, who answered either Excellent, Good, or Poor, 
-    according to their response, in counties in the state of 
+    title = "Mean number of respondents in the sample, and their corresponding
+    percentage, who answered either Excellent, Good, or Poor,
+    according to their response, in counties in the state of
     Minnesota, during the years 2002, 2006, and 2010",
     x = "Year",
     y = "Mean",
